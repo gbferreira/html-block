@@ -24,6 +24,7 @@ import type {
   ResolvedBoardConfig,
   StateStorage,
 } from "./types.js";
+import type { RouteRect } from "./utils/routing.js";
 
 export interface AddRectOptions {
   x?: number;
@@ -319,9 +320,10 @@ export class Board implements BlockHost {
     const block = this.blockIndex.get(id);
     if (!block) return;
     if (block instanceof RectBlock) {
-      // Refresh any line that's anchored to this rect.
+      // Any rect mutation can change endpoints (anchored lines) AND the
+      // obstacle set (so other lines may re-route). Refresh every line.
       for (const b of this.blocks) {
-        if (b instanceof LineBlock && b.isAnchoredTo(id)) b.refresh();
+        if (b instanceof LineBlock) b.refresh();
       }
     }
     this.emit({ type: "block:update", block: block.getState() });
@@ -366,6 +368,18 @@ export class Board implements BlockHost {
 
   getBlockState(id: string): BlockState | undefined {
     return this.blockIndex.get(id)?.getState();
+  }
+
+  getObstacleRects(excludeIds: ReadonlyArray<string>): RouteRect[] {
+    const exclude = new Set(excludeIds);
+    const out: RouteRect[] = [];
+    for (const b of this.blocks) {
+      if (!(b instanceof RectBlock)) continue;
+      if (exclude.has(b.id)) continue;
+      const s = b.getRectState();
+      out.push({ x: s.x, y: s.y, width: s.width, height: s.height });
+    }
+    return out;
   }
 
   startConnectionDrag(fromBlockId: string, side: EndpointSide, event: PointerEvent): void {

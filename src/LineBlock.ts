@@ -6,16 +6,20 @@ import type {
   LineEndpoint,
   RectBlockState,
 } from "./types.js";
+import {
+  pathMidpoint,
+  pointsToSvgPath,
+  routeOrthogonal,
+  type RoutePoint,
+} from "./utils/routing.js";
 
 const LABEL_OFFSET = 14;
 
 export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
-  private hitLine!: SVGLineElement;
-  private visibleLine!: SVGLineElement;
+  private hitPath!: SVGPathElement;
+  private visiblePath!: SVGPathElement;
   private labelText!: SVGTextElement;
   private isSelected = false;
-  private currentFrom = { x: 0, y: 0 };
-  private currentTo = { x: 0, y: 0 };
 
   constructor(state: LineBlockState, host: BlockHost) {
     super(state, host);
@@ -37,19 +41,21 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
     this.group.classList.add("hb-line");
     this.group.dataset.id = this.id;
 
-    this.hitLine = document.createElementNS(SVG_NS, "line");
-    this.hitLine.classList.add("hb-line__hit");
+    this.hitPath = document.createElementNS(SVG_NS, "path");
+    this.hitPath.classList.add("hb-line__hit");
+    this.hitPath.setAttribute("fill", "none");
 
-    this.visibleLine = document.createElementNS(SVG_NS, "line");
-    this.visibleLine.classList.add("hb-line__visible");
+    this.visiblePath = document.createElementNS(SVG_NS, "path");
+    this.visiblePath.classList.add("hb-line__visible");
+    this.visiblePath.setAttribute("fill", "none");
 
     this.labelText = document.createElementNS(SVG_NS, "text");
     this.labelText.classList.add("hb-line__label");
     this.labelText.setAttribute("text-anchor", "middle");
     this.labelText.setAttribute("dominant-baseline", "hanging");
 
-    this.group.appendChild(this.hitLine);
-    this.group.appendChild(this.visibleLine);
+    this.group.appendChild(this.hitPath);
+    this.group.appendChild(this.visiblePath);
     this.group.appendChild(this.labelText);
     parent.appendChild(this.group);
 
@@ -67,34 +73,33 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
   }
 
   /**
-   * Recomputes the rendered endpoints from the logical `from`/`to` (which may
-   * reference other blocks). Called on every mutation and whenever a
-   * connected rect block moves or resizes.
+   * Recomputes the rendered route, contouring around any other rect blocks
+   * that sit between the source and target endpoints.
    */
   refresh(): void {
-    this.currentFrom = this.resolveEndpoint(this.state.from);
-    this.currentTo = this.resolveEndpoint(this.state.to);
-    this.visibleLine.setAttribute("x1", String(this.currentFrom.x));
-    this.visibleLine.setAttribute("y1", String(this.currentFrom.y));
-    this.visibleLine.setAttribute("x2", String(this.currentTo.x));
-    this.visibleLine.setAttribute("y2", String(this.currentTo.y));
-    this.hitLine.setAttribute("x1", String(this.currentFrom.x));
-    this.hitLine.setAttribute("y1", String(this.currentFrom.y));
-    this.hitLine.setAttribute("x2", String(this.currentTo.x));
-    this.hitLine.setAttribute("y2", String(this.currentTo.y));
-    this.visibleLine.setAttribute("stroke", this.state.stroke);
+    const from = this.resolveEndpoint(this.state.from);
+    const to = this.resolveEndpoint(this.state.to);
+    const fromSide = this.state.from.side ?? "right";
+    const toSide = this.state.to.side ?? "left";
+    // Treat every rect block as an obstacle (including the source and target),
+    // so the line contours around them. The router still attaches to the
+    // chosen endpoint side via a perpendicular stub.
+    const obstacles = this.host.getObstacleRects([]);
+    const points: RoutePoint[] = routeOrthogonal(from, fromSide, to, toSide, obstacles);
+    const d = pointsToSvgPath(points);
+    this.visiblePath.setAttribute("d", d);
+    this.hitPath.setAttribute("d", d);
+    this.visiblePath.setAttribute("stroke", this.state.stroke);
     // `color` is inherited by referenced markers (which use fill="currentColor"),
     // so each line tints its own arrowheads.
-    this.visibleLine.setAttribute("color", this.state.stroke);
-    this.visibleLine.setAttribute("stroke-width", String(this.state.strokeWidth));
-    applyArrowMarkers(this.visibleLine, this.state.arrow);
+    this.visiblePath.setAttribute("color", this.state.stroke);
+    this.visiblePath.setAttribute("stroke-width", String(this.state.strokeWidth));
+    applyArrowMarkers(this.visiblePath, this.state.arrow);
 
-    const mid = midpoint(this.currentFrom, this.currentTo);
-    const offset = perpendicularOffset(this.currentFrom, this.currentTo, LABEL_OFFSET);
-    const labelX = mid.x + offset.x;
-    const labelY = mid.y + offset.y;
-    this.labelText.setAttribute("x", String(labelX));
-    this.labelText.setAttribute("y", String(labelY));
+    const mid = pathMidpoint(points);
+    const offset = perpendicularOffset(mid.direction, LABEL_OFFSET);
+    this.labelText.setAttribute("x", String(mid.point.x + offset.x));
+    this.labelText.setAttribute("y", String(mid.point.y + offset.y));
     this.labelText.style.fontSize = `${this.state.fontSize}px`;
     this.labelText.style.fontFamily = this.state.fontFamily;
     this.labelText.textContent = this.state.text;
@@ -116,15 +121,15 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
   setArrow(arrow: ArrowDirection): void {
     if (this.state.arrow === arrow) return;
     this.state = { ...this.state, arrow };
-    applyArrowMarkers(this.visibleLine, arrow);
+    applyArrowMarkers(this.visiblePath, arrow);
     this.host.notifyBlockChanged(this.id);
   }
 
   setStroke(color: string): void {
     if (this.state.stroke === color) return;
     this.state = { ...this.state, stroke: color };
-    this.visibleLine.setAttribute("stroke", color);
-    this.visibleLine.setAttribute("color", color);
+    this.visiblePath.setAttribute("stroke", color);
+    this.visiblePath.setAttribute("color", color);
     this.host.notifyBlockChanged(this.id);
   }
 
@@ -134,8 +139,8 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
       event.stopPropagation();
       this.host.selectBlock(this.id);
     };
-    this.hitLine.addEventListener("pointerdown", onPointerDown);
-    this.visibleLine.addEventListener("pointerdown", onPointerDown);
+    this.hitPath.addEventListener("pointerdown", onPointerDown);
+    this.visiblePath.addEventListener("pointerdown", onPointerDown);
     this.labelText.addEventListener("pointerdown", onPointerDown);
   }
 
@@ -183,22 +188,14 @@ export function nearestSide(
   return best;
 }
 
-function midpoint(a: { x: number; y: number }, b: { x: number; y: number }): { x: number; y: number } {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-}
-
 function perpendicularOffset(
-  a: { x: number; y: number },
-  b: { x: number; y: number },
+  direction: { dx: number; dy: number },
   amount: number,
 ): { x: number; y: number } {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy) || 1;
-  // Unit perpendicular pointing "below" the line in screen-space (positive y).
-  // Rotate (dx,dy) by +90deg => (-dy, dx). Pick the variant with positive y.
-  let nx = -dy / len;
-  let ny = dx / len;
+  const len = Math.hypot(direction.dx, direction.dy) || 1;
+  // Unit perpendicular pointing "below" the line (positive y in screen space).
+  let nx = -direction.dy / len;
+  let ny = direction.dx / len;
   if (ny < 0) {
     nx = -nx;
     ny = -ny;
@@ -206,25 +203,25 @@ function perpendicularOffset(
   return { x: nx * amount, y: ny * amount };
 }
 
-function applyArrowMarkers(line: SVGLineElement, arrow: ArrowDirection): void {
+function applyArrowMarkers(path: SVGPathElement, arrow: ArrowDirection): void {
   const startUrl = "url(#hb-arrow-start)";
   const endUrl = "url(#hb-arrow-end)";
   switch (arrow) {
     case "ltr":
-      line.removeAttribute("marker-start");
-      line.setAttribute("marker-end", endUrl);
+      path.removeAttribute("marker-start");
+      path.setAttribute("marker-end", endUrl);
       break;
     case "rtl":
-      line.setAttribute("marker-start", startUrl);
-      line.removeAttribute("marker-end");
+      path.setAttribute("marker-start", startUrl);
+      path.removeAttribute("marker-end");
       break;
     case "both":
-      line.setAttribute("marker-start", startUrl);
-      line.setAttribute("marker-end", endUrl);
+      path.setAttribute("marker-start", startUrl);
+      path.setAttribute("marker-end", endUrl);
       break;
     case "none":
-      line.removeAttribute("marker-start");
-      line.removeAttribute("marker-end");
+      path.removeAttribute("marker-start");
+      path.removeAttribute("marker-end");
       break;
   }
 }

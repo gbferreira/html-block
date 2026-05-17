@@ -4,6 +4,7 @@ import type {
   RectBlockState,
   ResolvedBoardConfig,
 } from "./types.js";
+import type { RouteRect } from "./utils/routing.js";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -25,6 +26,8 @@ export interface BlockHost {
   getBlockState(id: string): BlockState | undefined;
   /** Begin dragging a connection out of a rect's edge handle. */
   startConnectionDrag(fromBlockId: string, side: EndpointSide, event: PointerEvent): void;
+  /** Bounding rectangles of all rect blocks except those in `excludeIds`. */
+  getObstacleRects(excludeIds: ReadonlyArray<string>): RouteRect[];
 }
 
 export abstract class Block<TState extends BlockState = BlockState> {
