@@ -1,5 +1,5 @@
 import { LocalStorageAdapter } from "./storage.js";
-import type { BoardConfig, ResolvedBoardConfig } from "./types.js";
+import type { ArrowDirection, BoardConfig, ResolvedBoardConfig } from "./types.js";
 
 export const DEFAULT_COLORS = [
   "#ffffff",
@@ -12,6 +12,17 @@ export const DEFAULT_COLORS = [
   "#cbd5e1",
 ];
 
+export const DEFAULT_BACKGROUND_COLORS = [
+  "#ffffff",
+  "#f8fafc",
+  "#fef9c3",
+  "#dbeafe",
+  "#dcfce7",
+  "#fae8ff",
+  "#fee2e2",
+  "#0f172a",
+];
+
 export const DEFAULT_FONT_SIZES = [12, 14, 16, 18, 24, 32, 48];
 
 export function resolveConfig(config: BoardConfig = {}): ResolvedBoardConfig {
@@ -20,6 +31,12 @@ export function resolveConfig(config: BoardConfig = {}): ResolvedBoardConfig {
   const fontSizes =
     config.fontSizes && config.fontSizes.length > 0 ? config.fontSizes : DEFAULT_FONT_SIZES;
   const defaultFontSize = config.defaultFontSize ?? 14;
+  const backgroundColors =
+    config.backgroundColors && config.backgroundColors.length > 0
+      ? config.backgroundColors
+      : DEFAULT_BACKGROUND_COLORS;
+  const defaultBackgroundColor = config.defaultBackgroundColor ?? backgroundColors[0] ?? "#ffffff";
+  const defaultArrow: ArrowDirection = config.defaultArrow ?? "ltr";
 
   return {
     colors,
@@ -44,5 +61,10 @@ export function resolveConfig(config: BoardConfig = {}): ResolvedBoardConfig {
       height: config.minBlockSize?.height ?? 28,
     },
     className: config.className,
+    defaultBackgroundColor,
+    backgroundColors,
+    defaultLineColor: config.defaultLineColor ?? "#0f172a",
+    defaultArrow,
+    defaultLineWidth: config.defaultLineWidth ?? 2,
   };
 }

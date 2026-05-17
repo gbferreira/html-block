@@ -1,24 +1,39 @@
-import type { ResolvedBoardConfig } from "./types.js";
+import type { ArrowDirection, ResolvedBoardConfig } from "./types.js";
 
-export interface InspectorTarget {
-  fontSize: number;
-  fill: string;
-}
+export type InspectorTarget =
+  | { kind: "rect"; fontSize: number; fill: string }
+  | { kind: "line"; text: string; arrow: ArrowDirection; stroke: string; fontSize: number };
 
 export interface InspectorCallbacks {
   onFontSizeChange(size: number): void;
   onFillChange(color: string): void;
+  onLineTextChange(text: string): void;
+  onArrowChange(direction: ArrowDirection): void;
+  onStrokeChange(color: string): void;
   onDelete(): void;
 }
 
+const ARROW_OPTIONS: { value: ArrowDirection; label: string; title: string }[] = [
+  { value: "ltr", label: "\u2192", title: "Left to right" },
+  { value: "rtl", label: "\u2190", title: "Right to left" },
+  { value: "both", label: "\u2194", title: "Both directions" },
+  { value: "none", label: "\u2014", title: "No arrow" },
+];
+
 /**
- * Floating inspector for the currently selected block. Lets the user pick a
- * font size from `config.fontSizes` and a fill color from `config.colors`.
+ * Floating inspector for the currently selected block. Renders different
+ * controls depending on the block kind (rect vs line connector).
  */
 export class Inspector {
   private element: HTMLDivElement;
+  private rectPanel: HTMLDivElement;
+  private linePanel: HTMLDivElement;
   private fontSelect: HTMLSelectElement;
-  private swatchesEl: HTMLDivElement;
+  private fillSwatchesEl: HTMLDivElement;
+  private lineFontSelect: HTMLSelectElement;
+  private lineTextInput: HTMLInputElement;
+  private arrowGroup: HTMLDivElement;
+  private strokeSwatchesEl: HTMLDivElement;
   private deleteBtn: HTMLButtonElement;
   private isOpen = false;
 
@@ -32,35 +47,56 @@ export class Inspector {
     this.element.style.display = "none";
     this.element.addEventListener("mousedown", (e) => e.stopPropagation());
 
-    const fontRow = document.createElement("div");
-    fontRow.className = "hb-inspector__row";
-    const fontLabel = document.createElement("span");
-    fontLabel.className = "hb-inspector__label";
-    fontLabel.textContent = "Font size";
-    this.fontSelect = document.createElement("select");
-    this.fontSelect.className = "hb-inspector__select";
-    this.config.fontSizes.forEach((size) => {
-      const opt = document.createElement("option");
-      opt.value = String(size);
-      opt.textContent = `${size}px`;
-      this.fontSelect.appendChild(opt);
-    });
+    this.rectPanel = document.createElement("div");
+    this.rectPanel.className = "hb-inspector__panel";
+
+    const fontRow = row("Font size");
+    this.fontSelect = createFontSelect(this.config.fontSizes);
     this.fontSelect.addEventListener("change", () => {
       const value = Number(this.fontSelect.value);
       if (!Number.isNaN(value)) this.callbacks.onFontSizeChange(value);
     });
-    fontRow.appendChild(fontLabel);
     fontRow.appendChild(this.fontSelect);
 
-    const colorRow = document.createElement("div");
-    colorRow.className = "hb-inspector__row";
-    const colorLabel = document.createElement("span");
-    colorLabel.className = "hb-inspector__label";
-    colorLabel.textContent = "Color";
-    this.swatchesEl = document.createElement("div");
-    this.swatchesEl.className = "hb-inspector__swatches";
-    colorRow.appendChild(colorLabel);
-    colorRow.appendChild(this.swatchesEl);
+    const fillRow = row("Color");
+    this.fillSwatchesEl = document.createElement("div");
+    this.fillSwatchesEl.className = "hb-inspector__swatches";
+    fillRow.appendChild(this.fillSwatchesEl);
+
+    this.rectPanel.append(fontRow, fillRow);
+
+    this.linePanel = document.createElement("div");
+    this.linePanel.className = "hb-inspector__panel";
+
+    const labelRow = row("Label");
+    this.lineTextInput = document.createElement("input");
+    this.lineTextInput.type = "text";
+    this.lineTextInput.className = "hb-inspector__input";
+    this.lineTextInput.placeholder = "Text below line";
+    this.lineTextInput.addEventListener("input", () => {
+      this.callbacks.onLineTextChange(this.lineTextInput.value);
+    });
+    labelRow.appendChild(this.lineTextInput);
+
+    const lineFontRow = row("Font size");
+    this.lineFontSelect = createFontSelect(this.config.fontSizes);
+    this.lineFontSelect.addEventListener("change", () => {
+      const value = Number(this.lineFontSelect.value);
+      if (!Number.isNaN(value)) this.callbacks.onFontSizeChange(value);
+    });
+    lineFontRow.appendChild(this.lineFontSelect);
+
+    const arrowRow = row("Arrow");
+    this.arrowGroup = document.createElement("div");
+    this.arrowGroup.className = "hb-inspector__arrows";
+    arrowRow.appendChild(this.arrowGroup);
+
+    const strokeRow = row("Color");
+    this.strokeSwatchesEl = document.createElement("div");
+    this.strokeSwatchesEl.className = "hb-inspector__swatches";
+    strokeRow.appendChild(this.strokeSwatchesEl);
+
+    this.linePanel.append(labelRow, lineFontRow, arrowRow, strokeRow);
 
     const actionsRow = document.createElement("div");
     actionsRow.className = "hb-inspector__row";
@@ -72,16 +108,25 @@ export class Inspector {
     this.deleteBtn.addEventListener("click", () => this.callbacks.onDelete());
     actionsRow.appendChild(this.deleteBtn);
 
-    this.element.appendChild(fontRow);
-    this.element.appendChild(colorRow);
-    this.element.appendChild(actionsRow);
+    this.element.append(this.rectPanel, this.linePanel, actionsRow);
     this.host.appendChild(this.element);
-    this.renderSwatches("");
   }
 
   show(x: number, y: number, target: InspectorTarget): void {
-    this.fontSelect.value = String(this.nearestFontSize(target.fontSize));
-    this.renderSwatches(target.fill);
+    this.rectPanel.style.display = target.kind === "rect" ? "flex" : "none";
+    this.linePanel.style.display = target.kind === "line" ? "flex" : "none";
+
+    if (target.kind === "rect") {
+      this.fontSelect.value = String(this.nearestFontSize(target.fontSize));
+      this.renderSwatches(this.fillSwatchesEl, target.fill, this.callbacks.onFillChange);
+    } else {
+      if (this.lineTextInput.value !== target.text) {
+        this.lineTextInput.value = target.text;
+      }
+      this.lineFontSelect.value = String(this.nearestFontSize(target.fontSize));
+      this.renderArrowGroup(target.arrow);
+      this.renderSwatches(this.strokeSwatchesEl, target.stroke, this.callbacks.onStrokeChange);
+    }
 
     this.element.style.display = "flex";
     this.element.style.left = `${x}px`;
@@ -110,21 +155,46 @@ export class Inspector {
     this.element.remove();
   }
 
-  private renderSwatches(currentFill: string): void {
-    this.swatchesEl.innerHTML = "";
+  private renderSwatches(
+    container: HTMLDivElement,
+    current: string,
+    onPick: (color: string) => void,
+  ): void {
+    container.innerHTML = "";
     this.config.colors.forEach((color) => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "hb-inspector__swatch";
       btn.style.background = color;
       btn.title = color;
-      btn.setAttribute("aria-pressed", color === currentFill ? "true" : "false");
+      btn.setAttribute("aria-pressed", color === current ? "true" : "false");
       btn.addEventListener("click", () => {
-        this.callbacks.onFillChange(color);
-        this.renderSwatches(color);
+        onPick(color);
+        Array.from(container.children).forEach((c) =>
+          c.setAttribute("aria-pressed", c === btn ? "true" : "false"),
+        );
       });
-      this.swatchesEl.appendChild(btn);
+      container.appendChild(btn);
     });
+  }
+
+  private renderArrowGroup(current: ArrowDirection): void {
+    this.arrowGroup.innerHTML = "";
+    for (const opt of ARROW_OPTIONS) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "hb-inspector__arrow";
+      btn.textContent = opt.label;
+      btn.title = opt.title;
+      btn.setAttribute("aria-pressed", opt.value === current ? "true" : "false");
+      btn.addEventListener("click", () => {
+        this.callbacks.onArrowChange(opt.value);
+        Array.from(this.arrowGroup.children).forEach((c) =>
+          c.setAttribute("aria-pressed", c === btn ? "true" : "false"),
+        );
+      });
+      this.arrowGroup.appendChild(btn);
+    }
   }
 
   private nearestFontSize(target: number): number {
@@ -141,4 +211,26 @@ export class Inspector {
     }
     return best;
   }
+}
+
+function row(labelText: string): HTMLDivElement {
+  const r = document.createElement("div");
+  r.className = "hb-inspector__row";
+  const label = document.createElement("span");
+  label.className = "hb-inspector__label";
+  label.textContent = labelText;
+  r.appendChild(label);
+  return r;
+}
+
+function createFontSelect(sizes: number[]): HTMLSelectElement {
+  const sel = document.createElement("select");
+  sel.className = "hb-inspector__select";
+  sizes.forEach((size) => {
+    const opt = document.createElement("option");
+    opt.value = String(size);
+    opt.textContent = `${size}px`;
+    sel.appendChild(opt);
+  });
+  return sel;
 }

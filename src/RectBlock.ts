@@ -1,9 +1,12 @@
-import { Block, SVG_NS, type BlockHost } from "./Block.js";
-import type { BlockState, RectBlockState } from "./types.js";
+import { Block, SVG_NS, type BlockHost, type BoxBlock } from "./Block.js";
+import type { EndpointSide, RectBlockState } from "./types.js";
 
 const HANDLE_SIZE = 8;
 const HANDLE_KEYS = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
 type HandleKey = (typeof HANDLE_KEYS)[number];
+
+const CONNECTION_KEYS: EndpointSide[] = ["top", "right", "bottom", "left"];
+const CONNECTION_RADIUS = 5;
 
 interface DragState {
   pointerId: number;
@@ -24,12 +27,13 @@ interface ResizeState {
   origH: number;
 }
 
-export class RectBlock extends Block {
+export class RectBlock extends Block<RectBlockState> implements BoxBlock {
   private rect!: SVGRectElement;
   private foreign!: SVGForeignObjectElement;
   private textDiv!: HTMLDivElement;
   private selectionRect: SVGRectElement | null = null;
   private handleEls: Partial<Record<HandleKey, SVGRectElement>> = {};
+  private connectionEls: Partial<Record<EndpointSide, SVGCircleElement>> = {};
   private isSelected = false;
   private isEditingText = false;
   private dragState: DragState | null = null;
@@ -37,6 +41,35 @@ export class RectBlock extends Block {
 
   constructor(state: RectBlockState, host: BlockHost) {
     super(state, host);
+  }
+
+  getState(): RectBlockState {
+    return { ...this.state, border: { ...this.state.border } };
+  }
+
+  getRectState(): RectBlockState {
+    return this.getState();
+  }
+
+  setFill(fill: string): void {
+    if (this.state.fill === fill) return;
+    this.state = { ...this.state, fill };
+    this.applyState(this.state);
+    this.host.notifyBlockChanged(this.id);
+  }
+
+  setFontSize(size: number): void {
+    if (this.state.fontSize === size) return;
+    this.state = { ...this.state, fontSize: size };
+    this.applyState(this.state);
+    this.host.notifyBlockChanged(this.id);
+  }
+
+  setText(text: string): void {
+    if (this.state.text === text) return;
+    this.state = { ...this.state, text };
+    this.applyState(this.state);
+    this.host.notifyBlockChanged(this.id);
   }
 
   mount(parent: SVGGElement): void {
@@ -68,7 +101,7 @@ export class RectBlock extends Block {
     this.group.remove();
   }
 
-  applyState(next: BlockState): void {
+  applyState(next: RectBlockState): void {
     this.state = next;
     this.group.setAttribute("transform", `translate(${next.x} ${next.y})`);
     this.rect.setAttribute("width", String(next.width));
@@ -104,6 +137,7 @@ export class RectBlock extends Block {
       if (this.isEditingText) return;
       const target = event.target as Element | null;
       if (target?.classList.contains("hb-handle")) return;
+      if (target?.classList.contains("hb-conn")) return;
       event.stopPropagation();
       this.host.selectBlock(this.id);
       this.startDrag(event);
@@ -147,6 +181,7 @@ export class RectBlock extends Block {
       this.group.setAttribute("transform", `translate(${nextX} ${nextY})`);
       if (this.isSelected) this.updateSelectionVisuals();
       this.host.requestGrow(nextX + this.state.width, nextY + this.state.height);
+      this.host.notifyBlockChanged(this.id);
     };
     const onUp = (e: PointerEvent) => {
       if (!this.dragState || e.pointerId !== this.dragState.pointerId) return;
@@ -181,6 +216,15 @@ export class RectBlock extends Block {
       this.group.appendChild(h);
       this.handleEls[key] = h;
     }
+    for (const side of CONNECTION_KEYS) {
+      const c = document.createElementNS(SVG_NS, "circle");
+      c.classList.add("hb-conn", `hb-conn--${side}`);
+      c.setAttribute("r", String(CONNECTION_RADIUS));
+      c.dataset.side = side;
+      this.attachConnectionInteractions(c, side);
+      this.group.appendChild(c);
+      this.connectionEls[side] = c;
+    }
   }
 
   private removeSelectionVisuals(): void {
@@ -191,6 +235,10 @@ export class RectBlock extends Block {
     for (const key of HANDLE_KEYS) {
       this.handleEls[key]?.remove();
       this.handleEls[key] = undefined;
+    }
+    for (const side of CONNECTION_KEYS) {
+      this.connectionEls[side]?.remove();
+      this.connectionEls[side] = undefined;
     }
   }
 
@@ -221,6 +269,19 @@ export class RectBlock extends Block {
       el.setAttribute("x", String(p.x - half));
       el.setAttribute("y", String(p.y - half));
     }
+    const connPositions: Record<EndpointSide, { x: number; y: number }> = {
+      top: { x: w / 2, y: 0 },
+      right: { x: w, y: h / 2 },
+      bottom: { x: w / 2, y: h },
+      left: { x: 0, y: h / 2 },
+    };
+    for (const side of CONNECTION_KEYS) {
+      const el = this.connectionEls[side];
+      if (!el) continue;
+      const p = connPositions[side];
+      el.setAttribute("cx", String(p.x));
+      el.setAttribute("cy", String(p.y));
+    }
   }
 
   private attachHandleInteractions(el: SVGRectElement, key: HandleKey): void {
@@ -250,6 +311,7 @@ export class RectBlock extends Block {
         this.state = { ...this.state, ...next };
         this.applyStateNoNotify();
         this.host.requestGrow(next.x + next.width, next.y + next.height);
+        this.host.notifyBlockChanged(this.id);
       };
       const onUp = (e: PointerEvent) => {
         if (!this.resizeState || e.pointerId !== this.resizeState.pointerId) return;
@@ -267,6 +329,15 @@ export class RectBlock extends Block {
       el.addEventListener("pointermove", onMove);
       el.addEventListener("pointerup", onUp);
       el.addEventListener("pointercancel", onUp);
+    });
+  }
+
+  private attachConnectionInteractions(el: SVGCircleElement, side: EndpointSide): void {
+    el.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.stopPropagation();
+      event.preventDefault();
+      this.host.startConnectionDrag(this.id, side, event);
     });
   }
 

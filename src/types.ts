@@ -8,6 +8,11 @@ export interface BoardSize {
   height: number;
 }
 
+export interface PanOffset {
+  x: number;
+  y: number;
+}
+
 export interface BoardConfig {
   /** Color palette shown in the inspector. */
   colors?: string[];
@@ -33,6 +38,16 @@ export interface BoardConfig {
   minBlockSize?: BoardSize;
   /** Optional class name applied to the board host element. */
   className?: string;
+  /** Default background color of the board surface. */
+  defaultBackgroundColor?: string;
+  /** Palette shown when the user clicks the empty board to recolor it. */
+  backgroundColors?: string[];
+  /** Default stroke color for newly created lines. */
+  defaultLineColor?: string;
+  /** Default arrow direction for newly created lines. */
+  defaultArrow?: ArrowDirection;
+  /** Default stroke width (in board units) for newly created lines. */
+  defaultLineWidth?: number;
 }
 
 export interface ResolvedBoardConfig {
@@ -48,11 +63,21 @@ export interface ResolvedBoardConfig {
   growStep: number;
   minBlockSize: BoardSize;
   className?: string;
+  defaultBackgroundColor: string;
+  backgroundColors: string[];
+  defaultLineColor: string;
+  defaultArrow: ArrowDirection;
+  defaultLineWidth: number;
 }
 
-export interface BlockStateBase {
+/** Fields every block carries regardless of type. */
+export interface CommonBlockState {
   id: string;
   type: string;
+}
+
+export interface RectBlockState extends CommonBlockState {
+  type: "rect";
   x: number;
   y: number;
   width: number;
@@ -64,16 +89,39 @@ export interface BlockStateBase {
   fontFamily: string;
 }
 
-export interface RectBlockState extends BlockStateBase {
-  type: "rect";
+export type ArrowDirection = "ltr" | "rtl" | "both" | "none";
+
+export type EndpointSide = "top" | "right" | "bottom" | "left";
+
+export interface LineEndpoint {
+  /** When set, the endpoint snaps to a side of the referenced rect block. */
+  blockId: string | null;
+  side?: EndpointSide;
+  /** Free-floating coordinates used when blockId is null. */
+  x: number;
+  y: number;
 }
 
-export type BlockState = RectBlockState;
+export interface LineBlockState extends CommonBlockState {
+  type: "line";
+  from: LineEndpoint;
+  to: LineEndpoint;
+  arrow: ArrowDirection;
+  stroke: string;
+  strokeWidth: number;
+  text: string;
+  fontSize: number;
+  fontFamily: string;
+}
+
+export type BlockState = RectBlockState | LineBlockState;
 
 export interface BoardState {
   /** Schema version for forward compatibility. */
   version: 1;
   size: BoardSize;
+  pan: PanOffset;
+  backgroundColor: string;
   blocks: BlockState[];
 }
 

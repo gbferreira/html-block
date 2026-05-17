@@ -1,4 +1,9 @@
-import type { BlockState, ResolvedBoardConfig } from "./types.js";
+import type {
+  BlockState,
+  EndpointSide,
+  RectBlockState,
+  ResolvedBoardConfig,
+} from "./types.js";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -16,16 +21,20 @@ export interface BlockHost {
   selectBlock(id: string | null): void;
   /** Request the board to expand if the given bounds exceed its size. */
   requestGrow(right: number, bottom: number): void;
+  /** Look up the latest state of any block by id (used by lines for endpoints). */
+  getBlockState(id: string): BlockState | undefined;
+  /** Begin dragging a connection out of a rect's edge handle. */
+  startConnectionDrag(fromBlockId: string, side: EndpointSide, event: PointerEvent): void;
 }
 
-export abstract class Block {
+export abstract class Block<TState extends BlockState = BlockState> {
   readonly id: string;
   readonly type: string;
-  protected state: BlockState;
+  protected state: TState;
   protected host: BlockHost;
   protected group: SVGGElement;
 
-  constructor(state: BlockState, host: BlockHost) {
+  constructor(state: TState, host: BlockHost) {
     this.id = state.id;
     this.type = state.type;
     this.state = state;
@@ -39,46 +48,24 @@ export abstract class Block {
     return this.group;
   }
 
-  getState(): BlockState {
-    return { ...this.state, border: { ...this.state.border } };
-  }
+  abstract getState(): TState;
 
   abstract mount(parent: SVGGElement): void;
   abstract unmount(): void;
-  abstract applyState(next: BlockState): void;
-
-  setPosition(x: number, y: number): void {
-    this.state = { ...this.state, x, y };
-    this.applyState(this.state);
-    this.host.notifyBlockChanged(this.id);
-  }
-
-  setSize(width: number, height: number): void {
-    this.state = { ...this.state, width, height };
-    this.applyState(this.state);
-    this.host.notifyBlockChanged(this.id);
-  }
-
-  setText(text: string): void {
-    if (this.state.text === text) return;
-    this.state = { ...this.state, text };
-    this.applyState(this.state);
-    this.host.notifyBlockChanged(this.id);
-  }
-
-  setFill(fill: string): void {
-    if (this.state.fill === fill) return;
-    this.state = { ...this.state, fill };
-    this.applyState(this.state);
-    this.host.notifyBlockChanged(this.id);
-  }
-
-  setFontSize(size: number): void {
-    if (this.state.fontSize === size) return;
-    this.state = { ...this.state, fontSize: size };
-    this.applyState(this.state);
-    this.host.notifyBlockChanged(this.id);
-  }
-
+  abstract applyState(next: TState): void;
   abstract setSelected(selected: boolean): void;
+}
+
+/** Subset of methods only meaningful for blocks that have a 2D bounding box. */
+export interface BoxBlock {
+  getRectState(): RectBlockState;
+  setFill(color: string): void;
+  setFontSize(size: number): void;
+  setText(text: string): void;
+}
+
+/** A block whose endpoints depend on other blocks (e.g. line connectors). */
+export interface ConnectorBlock {
+  refresh(): void;
+  isAnchoredTo(blockId: string): boolean;
 }
