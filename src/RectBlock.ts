@@ -155,6 +155,12 @@ export class RectBlock extends Block<RectBlockState> implements BoxBlock {
       if (event.key === "Escape") {
         event.preventDefault();
         this.exitTextEdit(true);
+        return;
+      }
+      // Commit on Enter; allow Shift+Enter to insert a newline.
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        this.textDiv.blur();
       }
     });
   }

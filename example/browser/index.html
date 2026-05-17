@@ -99,6 +99,72 @@
       .tabs__add:hover {
         background: #eff6ff;
       }
+      .archive {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: #ffffff;
+        border-bottom: 1px solid #e2e8f0;
+        flex-wrap: wrap;
+      }
+      .archive[hidden] {
+        display: none;
+      }
+      .archive__title {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .archive__chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .archive__chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 6px 4px 10px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        font-size: 12px;
+        color: #334155;
+      }
+      .archive__chip-name {
+        font-weight: 500;
+      }
+      .archive__chip button {
+        font: inherit;
+        font-size: 12px;
+        line-height: 1;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        border-radius: 999px;
+        padding: 3px 6px;
+        cursor: pointer;
+      }
+      .archive__chip-reopen {
+        color: #1d4ed8;
+      }
+      .archive__chip-reopen:hover {
+        background: #eff6ff;
+      }
+      .archive__chip-delete {
+        color: #b91c1c;
+      }
+      .archive__chip-delete:hover {
+        background: #fee2e2;
+      }
+      .archive__empty {
+        font-size: 12px;
+        color: #94a3b8;
+        font-style: italic;
+      }
       main {
         flex: 1;
         padding: 12px 16px 16px;
@@ -177,6 +243,10 @@
     <nav class="tabs" id="tabs">
       <button class="tabs__add" id="new-board" type="button">+ New board</button>
     </nav>
+    <aside class="archive" id="archive" hidden>
+      <span class="archive__title">Closed boards</span>
+      <div class="archive__chips" id="archive-chips"></div>
+    </aside>
     <main id="tabs-body">
       <p class="empty">No boards yet. Click "New board" to begin.</p>
     </main>

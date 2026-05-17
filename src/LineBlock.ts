@@ -90,9 +90,9 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
     this.visiblePath.setAttribute("d", d);
     this.hitPath.setAttribute("d", d);
     this.visiblePath.setAttribute("stroke", this.state.stroke);
-    // `color` is inherited by referenced markers (which use fill="currentColor"),
-    // so each line tints its own arrowheads.
-    this.visiblePath.setAttribute("color", this.state.stroke);
+    // Marker shapes use fill="currentColor"; that resolves from the computed
+    // `color` property on the referencing path, not from the stroke attribute.
+    this.visiblePath.style.color = this.state.stroke;
     this.visiblePath.setAttribute("stroke-width", String(this.state.strokeWidth));
     applyArrowMarkers(this.visiblePath, this.state.arrow);
 
@@ -129,7 +129,7 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
     if (this.state.stroke === color) return;
     this.state = { ...this.state, stroke: color };
     this.visiblePath.setAttribute("stroke", color);
-    this.visiblePath.setAttribute("color", color);
+    this.visiblePath.style.color = color;
     this.host.notifyBlockChanged(this.id);
   }
 

@@ -82,8 +82,8 @@ const CSS = `
 }
 .hb-line__visible {
   fill: none;
-  stroke: #0f172a;
-  stroke-width: 2;
+  /* stroke and stroke-width are set from state via attributes so the inspector /
+     persistence can control them; a stylesheet rule would override those attrs */
 }
 .hb-line__label {
   fill: #0f172a;
