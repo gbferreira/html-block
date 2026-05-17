@@ -17,11 +17,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "rm -rf dist",
-    "start": "tsx example/index.ts",
-    "dev": "tsx watch example/index.ts",
-    "example": "npm run start",
-    "browser": "npm run build && vite example/browser",
-    "prepublishOnly": "npm run build"
+    "dev": "npm run build && vite example/browser"
   },
   "keywords": [
     "html",

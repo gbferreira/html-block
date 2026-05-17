@@ -3,67 +3,121 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>html-block — browser demo</title>
+    <title>html-block — board demo</title>
     <style>
+      :root {
+        color-scheme: light;
+      }
+      html, body {
+        height: 100%;
+      }
       body {
         font-family: ui-sans-serif, system-ui, sans-serif;
         margin: 0;
+        background: #f1f5f9;
+        color: #0f172a;
+        display: flex;
+        flex-direction: column;
         min-height: 100vh;
-        background: #0f1115;
-        color: #e7e9ee;
+      }
+      header.app-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: #ffffff;
+        border-bottom: 1px solid #e2e8f0;
+        flex-wrap: wrap;
+      }
+      header.app-header h1 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+        margin-right: auto;
+      }
+      header.app-header button {
+        font: inherit;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      header.app-header button:hover {
+        background: #eff6ff;
+        border-color: #93c5fd;
+      }
+      .hint {
+        margin: 8px 16px 0;
+        color: #64748b;
+        font-size: 12px;
       }
       main {
-        max-width: 48rem;
-        margin: 0 auto;
-        padding: 2rem 1.25rem 3rem;
+        flex: 1;
+        padding: 12px 16px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
       }
-      h1 {
-        font-size: 1.25rem;
+      .board-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        display: flex;
+        flex-direction: column;
+        height: 540px;
+      }
+      .board-card__header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #f8fafc;
+        flex: 0 0 auto;
+      }
+      .board-card__title {
+        font-size: 13px;
         font-weight: 600;
       }
-      p {
-        color: #9aa3b5;
-        line-height: 1.5;
-        margin-bottom: 1rem;
+      .board-card__actions {
+        margin-left: auto;
+        display: flex;
+        gap: 6px;
       }
-      .panel {
-        background: #171a21;
-        border: 1px solid #2a3242;
-        border-radius: 0.65rem;
-        padding: 1rem 1.1rem;
-        margin-top: 0.75rem;
+      .board-card__actions button {
+        font: inherit;
+        font-size: 12px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        border-radius: 6px;
+        padding: 4px 8px;
+        cursor: pointer;
       }
-      code {
-        font-family: ui-monospace, monospace;
-        font-size: 0.85rem;
-        color: #b8cad9;
+      .board-card__actions button:hover {
+        background: #eff6ff;
       }
-      .label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: #6b7589;
-        margin-bottom: 0.5rem;
+      /* The library mounts .hb-board inside the card; let it fill the card. */
+      .board-card .hb-board {
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
       }
     </style>
   </head>
   <body>
-    <main>
-      <h1>Browser demo (<code>dist/</code> build)</h1>
-      <p>
-        Imports the compiled library from <code>dist/index.js</code>. Run <code
-          >npm run browser</code
-        >
-        to rebuild and open this page.
-      </p>
-
-      <div class="label">Rendered output</div>
-      <div id="rendered" class="panel"></div>
-
-      <div class="label" style="margin-top: 1.25rem">Source string</div>
-      <div id="source" class="panel"><code>—</code></div>
-    </main>
-
+    <header class="app-header">
+      <h1>html-block demo</h1>
+      <button id="new-board" type="button">New board</button>
+    </header>
+    <p class="hint">
+      Right-click on a board to add a rectangle. Click a block to edit font size
+      or color. Double-click to edit text. Drag to move; drag a corner to
+      resize. State is persisted to localStorage automatically.
+    </p>
+    <main id="boards"></main>
     <script type="module" src="/main.ts"></script>
   </body>
 </html>
