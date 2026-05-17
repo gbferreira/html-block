@@ -184,6 +184,38 @@ const CSS = `
   gap: 8px;
   min-width: 240px;
 }
+.hb-inspector__drag {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px -8px 0;
+  padding: 4px 8px;
+  border-radius: 6px 6px 0 0;
+  color: #94a3b8;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  background: linear-gradient(#f8fafc, #f1f5f9);
+  border-bottom: 1px solid #e2e8f0;
+}
+.hb-inspector__drag:hover {
+  color: #475569;
+  background: linear-gradient(#f1f5f9, #e2e8f0);
+}
+.hb-inspector__drag.is-dragging,
+.hb-inspector__drag:active {
+  cursor: grabbing;
+}
+.hb-inspector__grip {
+  font-size: 14px;
+  line-height: 1;
+}
+.hb-inspector__drag-label {
+  font-weight: 600;
+}
 .hb-inspector__panel {
   display: flex;
   flex-direction: column;

@@ -26,6 +26,7 @@ const ARROW_OPTIONS: { value: ArrowDirection; label: string; title: string }[] =
  */
 export class Inspector {
   private element: HTMLDivElement;
+  private dragHandle: HTMLDivElement;
   private rectPanel: HTMLDivElement;
   private linePanel: HTMLDivElement;
   private fontSelect: HTMLSelectElement;
@@ -36,6 +37,8 @@ export class Inspector {
   private strokeSwatchesEl: HTMLDivElement;
   private deleteBtn: HTMLButtonElement;
   private isOpen = false;
+  /** Position chosen by the user via the drag handle, in container coords. */
+  private userPosition: { x: number; y: number } | null = null;
 
   constructor(
     private readonly host: HTMLElement,
@@ -46,6 +49,18 @@ export class Inspector {
     this.element.className = "hb-inspector";
     this.element.style.display = "none";
     this.element.addEventListener("mousedown", (e) => e.stopPropagation());
+
+    this.dragHandle = document.createElement("div");
+    this.dragHandle.className = "hb-inspector__drag";
+    this.dragHandle.title = "Drag to move";
+    const grip = document.createElement("span");
+    grip.className = "hb-inspector__grip";
+    grip.textContent = "\u2630";
+    const dragLabel = document.createElement("span");
+    dragLabel.className = "hb-inspector__drag-label";
+    dragLabel.textContent = "Drag";
+    this.dragHandle.append(grip, dragLabel);
+    this.attachDrag();
 
     this.rectPanel = document.createElement("div");
     this.rectPanel.className = "hb-inspector__panel";
@@ -108,7 +123,7 @@ export class Inspector {
     this.deleteBtn.addEventListener("click", () => this.callbacks.onDelete());
     actionsRow.appendChild(this.deleteBtn);
 
-    this.element.append(this.rectPanel, this.linePanel, actionsRow);
+    this.element.append(this.dragHandle, this.rectPanel, this.linePanel, actionsRow);
     this.host.appendChild(this.element);
   }
 
@@ -129,16 +144,14 @@ export class Inspector {
     }
 
     this.element.style.display = "flex";
-    this.element.style.left = `${x}px`;
-    this.element.style.top = `${y}px`;
 
-    const rect = this.element.getBoundingClientRect();
-    const hostRect = this.host.getBoundingClientRect();
-    if (rect.right > hostRect.right) {
-      this.element.style.left = `${Math.max(0, x - rect.width)}px`;
-    }
-    if (rect.bottom > hostRect.bottom) {
-      this.element.style.top = `${Math.max(0, y - rect.height)}px`;
+    // If the user has already dragged the inspector while it's open, keep it
+    // where they put it (so the block's "+" connection handles stay visible).
+    // A fresh open after hide() reverts to the auto-anchored position.
+    if (this.userPosition && this.isOpen) {
+      this.applyClampedPosition(this.userPosition.x, this.userPosition.y);
+    } else {
+      this.applyClampedPosition(x, y);
     }
 
     this.isOpen = true;
@@ -148,6 +161,8 @@ export class Inspector {
     if (!this.isOpen) return;
     this.isOpen = false;
     this.element.style.display = "none";
+    // Forget the user-chosen position so the next selection re-anchors.
+    this.userPosition = null;
   }
 
   destroy(): void {
@@ -195,6 +210,69 @@ export class Inspector {
       });
       this.arrowGroup.appendChild(btn);
     }
+  }
+
+  private attachDrag(): void {
+    this.dragHandle.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const startClientX = event.clientX;
+      const startClientY = event.clientY;
+      const rect = this.element.getBoundingClientRect();
+      const hostRect = this.host.getBoundingClientRect();
+      const startX = rect.left - hostRect.left;
+      const startY = rect.top - hostRect.top;
+      this.dragHandle.setPointerCapture(event.pointerId);
+      this.dragHandle.classList.add("is-dragging");
+
+      const onMove = (e: PointerEvent) => {
+        if (e.pointerId !== event.pointerId) return;
+        const nx = startX + (e.clientX - startClientX);
+        const ny = startY + (e.clientY - startClientY);
+        this.applyClampedPosition(nx, ny);
+        const rect2 = this.element.getBoundingClientRect();
+        const host2 = this.host.getBoundingClientRect();
+        this.userPosition = {
+          x: rect2.left - host2.left,
+          y: rect2.top - host2.top,
+        };
+      };
+      const onUp = (e: PointerEvent) => {
+        if (e.pointerId !== event.pointerId) return;
+        try {
+          this.dragHandle.releasePointerCapture(event.pointerId);
+        } catch {
+          // ignore — capture may already be released
+        }
+        this.dragHandle.classList.remove("is-dragging");
+        this.dragHandle.removeEventListener("pointermove", onMove);
+        this.dragHandle.removeEventListener("pointerup", onUp);
+        this.dragHandle.removeEventListener("pointercancel", onUp);
+      };
+      this.dragHandle.addEventListener("pointermove", onMove);
+      this.dragHandle.addEventListener("pointerup", onUp);
+      this.dragHandle.addEventListener("pointercancel", onUp);
+    });
+  }
+
+  private applyClampedPosition(x: number, y: number): void {
+    this.element.style.left = `${x}px`;
+    this.element.style.top = `${y}px`;
+    const rect = this.element.getBoundingClientRect();
+    const hostRect = this.host.getBoundingClientRect();
+    let nx = x;
+    let ny = y;
+    if (rect.right > hostRect.right) {
+      nx = Math.max(0, hostRect.right - hostRect.left - rect.width);
+    }
+    if (rect.bottom > hostRect.bottom) {
+      ny = Math.max(0, hostRect.bottom - hostRect.top - rect.height);
+    }
+    if (nx < 0) nx = 0;
+    if (ny < 0) ny = 0;
+    if (nx !== x) this.element.style.left = `${nx}px`;
+    if (ny !== y) this.element.style.top = `${ny}px`;
   }
 
   private nearestFontSize(target: number): number {
