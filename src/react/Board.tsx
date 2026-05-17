@@ -5,11 +5,11 @@ import {
   useRef,
 } from "react";
 import type { CSSProperties } from "react";
-import { createBoard } from "../Board.js";
-import type { Board as BoardInstance } from "../Board.js";
+import { createBoard } from "../models/Board.js";
+import type { Board as BoardInstance } from "../models/Board.js";
 import { downloadBoardPng, downloadBoardStateJson } from "../downloadBoard.js";
-import { slugBoardName, storageKeyForBoardName } from "../boardIdentity.js";
-import type { BoardConfig, BoardEventListener } from "../types.js";
+import { slugBoardName, storageKeyForBoardName } from "../common/boardIdentity.js";
+import type { BoardConfig, BoardEventListener } from "../common/types.js";
 
 export interface HtmlBlockBoardProps extends BoardConfig {
   /** Display name; drives default storage key and export filenames (see `storagePrefix` / `storageKey`). */
@@ -26,6 +26,7 @@ export interface HtmlBlockBoardProps extends BoardConfig {
 
 export interface HtmlBlockBoardHandle {
   getInstance(): BoardInstance | null;
+  save(): void;
   exportJSON(fileName?: string): void;
   exportPNG(fileName?: string): Promise<void>;
 }
@@ -71,6 +72,9 @@ export const HtmlBlockBoard = forwardRef<HtmlBlockBoardHandle, HtmlBlockBoardPro
       ref,
       () => ({
         getInstance: () => boardRef.current,
+        save: () => {
+          boardRef.current?.save();
+        },
         exportJSON: (fileName?: string) => {
           const b = boardRef.current;
           if (!b) return;

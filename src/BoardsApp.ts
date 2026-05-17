@@ -1,5 +1,5 @@
-import { Board, createBoard } from "./Board.js";
-import type { BoardConfig } from "./types.js";
+import { Board, createBoard } from "./models/Board.js";
+import type { BoardConfig } from "./common/types.js";
 
 export interface BoardsAppOptions {
   /** Container into which board hosts will be appended. */

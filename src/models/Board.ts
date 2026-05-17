@@ -1,13 +1,13 @@
 import { SVG_NS, type Block, type BlockHost, type ConnectorBlock } from "./Block.js";
 import { RectBlock } from "./RectBlock.js";
 import { LineBlock, endpointForRect, nearestSide } from "./LineBlock.js";
-import { resolveConfig } from "./config.js";
-import { ContextMenu } from "./ContextMenu.js";
-import { ColorPopover } from "./ColorPopover.js";
-import { Inspector, type InspectorTarget } from "./Inspector.js";
-import { DebouncedStorage, LocalStorageAdapter } from "./storage.js";
-import { injectStyles } from "./style.js";
-import { rasterizeSvg, serializeSvg } from "./utils/png.js";
+import { resolveConfig } from "../common/config.js";
+import { ContextMenu } from "../common/ContextMenu.js";
+import { ColorPopover } from "../common/ColorPopover.js";
+import { Inspector, type InspectorTarget } from "../common/Inspector.js";
+import { DebouncedStorage, LocalStorageAdapter } from "../common/storage.js";
+import { injectStyles } from "../styles/injectStyles.js";
+import { rasterizeSvg, serializeSvg } from "../common/png.js";
 import type {
   ArrowDirection,
   BlockState,
@@ -23,8 +23,8 @@ import type {
   RectBlockState,
   ResolvedBoardConfig,
   StateStorage,
-} from "./types.js";
-import type { RouteRect } from "./utils/routing.js";
+} from "../common/types.js";
+import type { RouteRect } from "../common/routing.js";
 
 export interface AddRectOptions {
   x?: number;
@@ -288,6 +288,13 @@ export class Board implements BlockHost {
   on(listener: BoardEventListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /** Persist current state to storage immediately (bypass debounce coalescing). */
+  save(): void {
+    if (this.destroyed) return;
+    this.persist();
+    this.debouncedStorage.flush();
   }
 
   destroy(): void {

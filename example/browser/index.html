@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>html-block — tabbed demo</title>
+    <title>html-block — browser example</title>
     <style>
       :root {
         color-scheme: light;
@@ -25,6 +25,25 @@
         flex: 1;
         display: flex;
         flex-direction: column;
+        min-height: 0;
+      }
+      .app-shell {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .app-columns {
+        flex: 1;
+        display: flex;
+        flex-direction: row;
+        min-height: 0;
+      }
+      .app-main-column {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
         min-height: 0;
       }
       header.app-header {
@@ -58,39 +77,11 @@
         padding: 4px 10px;
         cursor: pointer;
       }
-      .toolbar button:hover {
-        background: #eff6ff;
-      }
-      .tabs {
-        display: flex;
-        align-items: flex-end;
-        gap: 4px;
-        padding: 0 16px;
-        background: #ffffff;
-        border-bottom: 1px solid #e2e8f0;
-        flex: 0 0 auto;
-        overflow-x: auto;
-      }
-      .tab {
-        padding: 8px 14px;
-        border: 1px solid #e2e8f0;
-        border-bottom: none;
-        background: #f8fafc;
-        color: #475569;
-        font: inherit;
-        font-size: 13px;
-        border-radius: 8px 8px 0 0;
-        cursor: pointer;
-        position: relative;
-        top: 1px;
-      }
-      .tab:hover {
+      .hint code {
+        font-size: 11px;
         background: #f1f5f9;
-      }
-      .tab.is-active {
-        background: #ffffff;
-        color: #0f172a;
-        font-weight: 600;
+        padding: 1px 4px;
+        border-radius: 4px;
       }
       .board-shell {
         flex: 1;
@@ -102,6 +93,70 @@
       .board-mount .hb-board {
         height: 100%;
         min-height: 360px;
+      }
+      .board-sidebar {
+        flex: 0 0 0;
+        width: 0;
+        opacity: 0;
+        visibility: hidden;
+        overflow: hidden;
+        align-self: stretch;
+        border-left: 1px solid transparent;
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        transition:
+          flex-basis 0.2s ease,
+          opacity 0.18s ease,
+          width 0.2s ease,
+          visibility 0.2s;
+      }
+      .board-sidebar.is-visible {
+        flex-basis: 260px;
+        width: 260px;
+        max-width: min(260px, 40vw);
+        opacity: 1;
+        visibility: visible;
+        border-left-color: #e2e8f0;
+      }
+      .board-sidebar-header {
+        padding: 10px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        border-bottom: 1px solid #e2e8f0;
+        flex: 0 0 auto;
+        color: #334155;
+      }
+      .board-sidebar-list {
+        list-style: none;
+        margin: 0;
+        padding: 8px;
+        overflow: auto;
+        flex: 1;
+        min-height: 0;
+      }
+      .board-sidebar-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        font-size: 13px;
+        padding: 8px 10px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: transparent;
+        color: #475569;
+        cursor: pointer;
+      }
+      .board-sidebar-item:hover {
+        background: #f8fafc;
+      }
+      .board-sidebar-item.is-active {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #0f172a;
+        font-weight: 600;
       }
     </style>
   </head>

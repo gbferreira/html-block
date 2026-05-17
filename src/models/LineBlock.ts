@@ -5,13 +5,13 @@ import type {
   LineBlockState,
   LineEndpoint,
   RectBlockState,
-} from "./types.js";
+} from "../common/types.js";
 import {
   pathMidpoint,
   pointsToSvgPath,
   routeOrthogonal,
   type RoutePoint,
-} from "./utils/routing.js";
+} from "../common/routing.js";
 
 const LABEL_OFFSET = 14;
 

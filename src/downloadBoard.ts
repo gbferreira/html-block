@@ -1,5 +1,5 @@
-import type { Board } from "./Board.js";
-import type { BoardState } from "./types.js";
+import type { Board } from "./models/Board.js";
+import type { BoardState } from "./common/types.js";
 
 /**
  * Browser-only: trigger a file download from a Blob (`<a download>` + object URL).

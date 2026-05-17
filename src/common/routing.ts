@@ -1,4 +1,4 @@
-import type { EndpointSide } from "../types.js";
+import type { EndpointSide } from "./types.js";
 
 export interface RouteRect {
   x: number;

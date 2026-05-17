@@ -3,8 +3,8 @@ import type {
   EndpointSide,
   RectBlockState,
   ResolvedBoardConfig,
-} from "./types.js";
-import type { RouteRect } from "./utils/routing.js";
+} from "../common/types.js";
+import type { RouteRect } from "../common/routing.js";
 
 export const SVG_NS = "http://www.w3.org/2000/svg";
 

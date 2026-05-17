@@ -1,5 +1,5 @@
 import { Block, SVG_NS, type BlockHost, type BoxBlock } from "./Block.js";
-import type { EndpointSide, RectBlockState } from "./types.js";
+import type { EndpointSide, RectBlockState } from "../common/types.js";
 
 const HANDLE_SIZE = 8;
 const HANDLE_KEYS = ["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const;
