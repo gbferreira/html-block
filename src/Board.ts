@@ -659,7 +659,11 @@ export class Board implements BlockHost {
   private async loadFromStorage(): Promise<void> {
     try {
       const loaded = await Promise.resolve(this.storage.load(this.config.storageKey));
-      if (!loaded || this.destroyed) return;
+      if (this.destroyed) return;
+      if (!loaded) {
+        this.persist();
+        return;
+      }
       this.loadState(loaded);
     } catch (err) {
       console.error("[html-block] failed to load board state", err);

@@ -24,7 +24,8 @@ snapshot).
   driven by `BoardConfig.backgroundColors`.
 - State auto-persists to `localStorage` (default) and is fully accessible via
   `board.getState()` so the developer can upload it to a database.
-- `exportPNG()` returns a `Blob` and `exportSVG()` returns the source string.
+- `board.exportPNG()` returns a `Blob` and `exportSVG()` returns the source string.
+- **Download to disk** in the browser: `downloadBoardStateJson`, `downloadBoardPng`, `triggerDownloadBlob` (see [Download helpers](#download-helpers-browser)).
 - `createBoardsApp(...)` lets you create and remove **multiple boards** on the
   same page through a small registry.
 - The board **auto-grows** as content extends past its right/bottom edge.
@@ -35,7 +36,68 @@ snapshot).
 npm install html-block
 ```
 
-## Quick start
+When using **`html-block/react`**, also install peers:
+
+```bash
+npm install react react-dom
+```
+
+## React (`html-block/react`)
+
+Optional React wrapper: `import { Board } from "html-block/react"`. Tab UIs are not part of the package; build your own shell (see the tabbed **`example/browser`** demo).
+
+- **`name`** (required): display id; default export filenames use `slugBoardName(name)` (e.g. `my-diagram.json`).
+- **`storagePrefix`**: defaults to `"html-block"`. Effective `storageKey` is the explicit `storageKey` prop if set; otherwise `${storagePrefix}:${slugBoardName(name)}` (no template literal required in user code).
+- **`storageKey`**: optional; overrides the derived key.
+- **`hostClassName` / `hostStyle`**: outer wrapper `div`. Other props match [`BoardConfig`](#configuration-boardconfig) (e.g. `colors`, `initialSize`).
+- **`onEvent`**: `board.on(…)` subscription, cleaned up on unmount.
+- **`ref`**: `getInstance()`, `exportJSON(fileName?)`, `exportPNG(fileName?)` — exports use the shared **download** helpers from `html-block`.
+
+Changing **`name`** / storage identity should remount the component (e.g. `key={name}`) so `createBoard` loads the correct `localStorage` entry.
+
+```tsx
+import { useRef } from "react";
+import { Board, type HtmlBlockBoardHandle } from "html-block/react";
+
+export function Demo() {
+  const boardRef = useRef<HtmlBlockBoardHandle>(null);
+  return (
+    <>
+      <button type="button" onClick={() => boardRef.current?.exportJSON()}>
+        Export JSON
+      </button>
+      <button type="button" onClick={() => void boardRef.current?.exportPNG()}>
+        Export PNG
+      </button>
+      <Board
+        ref={boardRef}
+        name="My diagram"
+        storagePrefix="html-block"
+        initialSize={{ width: 1200, height: 800 }}
+        growStep={200}
+      />
+    </>
+  );
+}
+```
+
+## Download helpers (browser)
+
+Use these for “Save as file” from a [`Board`](src/Board.ts) instance (also used internally by the React ref):
+
+```ts
+import { downloadBoardStateJson, downloadBoardPng, triggerDownloadBlob } from "html-block";
+import type { BoardState } from "html-block";
+
+downloadBoardStateJson(state, "snapshot.json");
+await downloadBoardPng(board, "snapshot.png", { background: "#ffffff" });
+```
+
+**Identity helpers:** `slugBoardName(name)` and `storageKeyForBoardName(name, prefix?)` are exported for filenames and keys.
+
+## Repo examples (`npm run dev`)
+
+Vite serves **`example/browser/`**: open **`/`** for a small **React** demo with multiple tabs, each board keyed by tab name (**example-only**; not shipped as a library component).
 
 ```ts
 import { createBoard } from "html-block";
@@ -226,9 +288,9 @@ app.removeBoard("design-2");
 
 Each board automatically gets its own storage key
 (`${defaults.storageKey}:${name}`) so multiple boards on the same page
-persist independently. The bundled browser demo uses this API to drive a
-**tab strip** where each tab hosts its own board, with "+ New board" to add
-tabs and a per-tab close button.
+persist independently. Use this API when you want vanilla multi-board UIs;
+the repo’s **`example/browser`** demo uses the React wrapper with a simple
+fixed tab list instead.
 
 ## Auto-grow
 

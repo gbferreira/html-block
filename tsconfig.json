@@ -10,7 +10,8 @@
     "sourceMap": true,
     "noEmit": true,
     "rootDir": ".",
-    "outDir": "dist"
+    "outDir": "dist",
+    "jsx": "react-jsx"
   },
   "include": ["src/**/*", "example/**/*"]
 }
