@@ -4,19 +4,45 @@ import {
   type HtmlBlockBoardHandle,
   type HtmlBlockBoardProps,
 } from "../../dist/react/index.js";
-import {
-  DEFAULT_BACKGROUND_COLORS,
-  DEFAULT_COLORS,
-  DEFAULT_FONT_SIZES,
-  BoardRegistry,
-} from "../../dist/index.js";
+import { DEFAULT_FONT_SIZES, BoardRegistry } from "../../dist/index.js";
 
 const STORAGE_PREFIX = "html-block";
 
+/**
+ * Local swatches for the example: strong hues and anchors (white / ink) so
+ * adjacent picks stay easy to tell apart on the canvas.
+ */
+const EXAMPLE_BLOCK_COLORS = [
+  "#ffffff",
+  "#0f172a",
+  "#b91c1c",
+  "#c2410c",
+  "#a16207",
+  "#15803d",
+  "#1d4ed8",
+  "#6d28d9",
+  "#9d174d",
+] as const;
+
+/**
+ * Board background options from near-white tints to deep bases; each step is
+ * visibly different for the canvas chrome and export previews.
+ */
+const EXAMPLE_BACKGROUND_COLORS = [
+  "#fafafa",
+  "#dbeafe",
+  "#fef08a",
+  "#bbf7d0",
+  "#f5d0fe",
+  "#fed7aa",
+  "#1e293b",
+  "#09090b",
+] as const;
+
 const boardConfig = {
   storagePrefix: STORAGE_PREFIX,
-  colors: DEFAULT_COLORS,
-  backgroundColors: DEFAULT_BACKGROUND_COLORS,
+  colors: [...EXAMPLE_BLOCK_COLORS],
+  backgroundColors: [...EXAMPLE_BACKGROUND_COLORS],
   fontSizes: DEFAULT_FONT_SIZES,
   defaultFontSize: 14,
   initialSize: { width: 1100, height: 600 },
