@@ -13,7 +13,7 @@ export interface ContextMenuItem {
 export class ContextMenu {
   private element: HTMLDivElement;
   private items: ContextMenuItem[] = [];
-  private isOpen = false;
+  private menuOpen = false;
   private outsideHandler = (event: MouseEvent) => {
     if (!this.element.contains(event.target as Node)) this.close();
   };
@@ -53,8 +53,8 @@ export class ContextMenu {
       this.element.style.top = `${Math.max(0, y - rect.height)}px`;
     }
 
-    if (!this.isOpen) {
-      this.isOpen = true;
+    if (!this.menuOpen) {
+      this.menuOpen = true;
       setTimeout(() => {
         document.addEventListener("mousedown", this.outsideHandler, true);
         document.addEventListener("keydown", this.keyHandler);
@@ -63,8 +63,8 @@ export class ContextMenu {
   }
 
   close(): void {
-    if (!this.isOpen) return;
-    this.isOpen = false;
+    if (!this.menuOpen) return;
+    this.menuOpen = false;
     this.element.style.display = "none";
     document.removeEventListener("mousedown", this.outsideHandler, true);
     document.removeEventListener("keydown", this.keyHandler);
@@ -73,6 +73,11 @@ export class ContextMenu {
   destroy(): void {
     this.close();
     this.element.remove();
+  }
+
+  /** Whether the menu is visible (for disambiguating click-to-close vs click-to-open). */
+  isOpen(): boolean {
+    return this.menuOpen;
   }
 
   private render(): void {

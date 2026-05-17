@@ -15,12 +15,12 @@ snapshot).
   drag from one onto another rect to draw a line. Lines have a label that
   sits below the line, configurable arrow direction
   (`ltr` / `rtl` / `both` / `none`), and stroke color.
-- Right-click the board to open a toolbox; "Add rectangle" is shipped, and the
+- **Left-click** the empty board to open a toolbox; "Add rectangle" is shipped, and the
   menu is designed to accept additional items.
 - Click a block to open an inspector. Rects expose font size + fill color;
   lines expose label text, arrow direction, font size, and stroke color.
 - **Pan empty space** like Miro: drag any empty area to scroll the board
-  freely. **Single-click empty space** opens a background-color popover
+  freely. **Right-click empty space** opens a background-color popover
   driven by `BoardConfig.backgroundColors`.
 - State auto-persists to `localStorage` (default) and is fully accessible via
   `board.getState()` so the developer can upload it to a database.
@@ -68,14 +68,14 @@ board.addLine({
 
 ### Interactions
 
-- Right-click the empty board to open the toolbox.
+- Left-click the empty board to open the toolbox.
 - Drag any rect to move it; drag a corner/edge handle to resize.
 - Double-click a rect to edit its text. Press `Escape` (or click outside) to
   commit.
 - With a rect selected, drag a small "+" handle on its edge onto another rect
   to draw a connector line. Drop in empty space to cancel.
 - Click a line to select it. The inspector shows label/arrow/font-size/color.
-- Drag empty board space to **pan**. Single click empty space to open the
+- Drag empty board space to **pan**. Right-click empty space to open the
   **background color** popover.
 - `Delete` removes the selected block. `Escape` deselects.
 
@@ -97,7 +97,7 @@ All fields are optional; defaults are applied via `resolveConfig`.
 | `growStep`               | `200`                                       | How much the board grows when blocks overflow          |
 | `minBlockSize`           | `{ width: 40, height: 28 }`                 | Lower bound for resize                                 |
 | `defaultBackgroundColor` | `"#ffffff"`                                 | Initial board background fill                          |
-| `backgroundColors`       | 8 soft swatches                             | Palette offered when clicking the empty board          |
+| `backgroundColors`       | 8 soft swatches                             | Palette offered when right-clicking the empty board    |
 | `defaultLineColor`       | `"#0f172a"`                                 | Stroke color for newly created lines                   |
 | `defaultArrow`           | `"ltr"`                                     | Initial arrow direction (`ltr`/`rtl`/`both`/`none`)    |
 | `defaultLineWidth`       | `2`                                         | Stroke width for newly created lines                   |
@@ -153,7 +153,8 @@ interface BoardState {
 ```
 
 A drag with movement greater than ~4px on empty space pans the viewport. A
-shorter drag (i.e. a click) opens the background-color popover at the cursor.
+shorter left-button gesture (i.e. a click) opens the toolbox at the cursor;
+**right-click** empty space opens the background-color popover.
 
 ## Persistence
 

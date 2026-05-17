@@ -28,6 +28,8 @@ export interface BlockHost {
   startConnectionDrag(fromBlockId: string, side: EndpointSide, event: PointerEvent): void;
   /** Bounding rectangles of all rect blocks except those in `excludeIds`. */
   getObstacleRects(excludeIds: ReadonlyArray<string>): RouteRect[];
+  /** SVG `<defs>` on the board (for per-line arrow markers, etc.). */
+  getSvgDefs(): SVGDefsElement;
 }
 
 export abstract class Block<TState extends BlockState = BlockState> {

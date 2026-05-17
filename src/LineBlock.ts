@@ -20,6 +20,9 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
   private visiblePath!: SVGPathElement;
   private labelText!: SVGTextElement;
   private isSelected = false;
+  /** Each line owns two `<marker>` defs with explicit fill (browser `currentColor` in markers is flaky). */
+  private arrowMarkerEnd: SVGMarkerElement | null = null;
+  private arrowMarkerStart: SVGMarkerElement | null = null;
 
   constructor(state: LineBlockState, host: BlockHost) {
     super(state, host);
@@ -64,6 +67,10 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
   }
 
   unmount(): void {
+    this.arrowMarkerEnd?.remove();
+    this.arrowMarkerStart?.remove();
+    this.arrowMarkerEnd = null;
+    this.arrowMarkerStart = null;
     this.group.remove();
   }
 
@@ -90,11 +97,10 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
     this.visiblePath.setAttribute("d", d);
     this.hitPath.setAttribute("d", d);
     this.visiblePath.setAttribute("stroke", this.state.stroke);
-    // Marker shapes use fill="currentColor"; that resolves from the computed
-    // `color` property on the referencing path, not from the stroke attribute.
-    this.visiblePath.style.color = this.state.stroke;
     this.visiblePath.setAttribute("stroke-width", String(this.state.strokeWidth));
-    applyArrowMarkers(this.visiblePath, this.state.arrow);
+    this.ensureColoredArrowMarkers();
+    this.syncArrowMarkerFills();
+    applyArrowMarkers(this.visiblePath, this.state.arrow, markerIdFragment(this.id));
 
     const mid = pathMidpoint(points);
     const offset = perpendicularOffset(mid.direction, LABEL_OFFSET);
@@ -121,7 +127,9 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
   setArrow(arrow: ArrowDirection): void {
     if (this.state.arrow === arrow) return;
     this.state = { ...this.state, arrow };
-    applyArrowMarkers(this.visiblePath, arrow);
+    this.ensureColoredArrowMarkers();
+    this.syncArrowMarkerFills();
+    applyArrowMarkers(this.visiblePath, arrow, markerIdFragment(this.id));
     this.host.notifyBlockChanged(this.id);
   }
 
@@ -129,7 +137,8 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
     if (this.state.stroke === color) return;
     this.state = { ...this.state, stroke: color };
     this.visiblePath.setAttribute("stroke", color);
-    this.visiblePath.style.color = color;
+    this.ensureColoredArrowMarkers();
+    this.syncArrowMarkerFills();
     this.host.notifyBlockChanged(this.id);
   }
 
@@ -152,6 +161,28 @@ export class LineBlock extends Block<LineBlockState> implements ConnectorBlock {
       }
     }
     return { x: ep.x, y: ep.y };
+  }
+
+  private ensureColoredArrowMarkers(): void {
+    if (this.arrowMarkerEnd) return;
+    const frag = markerIdFragment(this.id);
+    const defs = this.host.getSvgDefs();
+    this.arrowMarkerEnd = createColoredArrowMarker(`hb-la-${frag}-end`, "auto", this.state.stroke);
+    this.arrowMarkerStart = createColoredArrowMarker(
+      `hb-la-${frag}-start`,
+      "auto-start-reverse",
+      this.state.stroke,
+    );
+    defs.appendChild(this.arrowMarkerEnd);
+    defs.appendChild(this.arrowMarkerStart);
+  }
+
+  private syncArrowMarkerFills(): void {
+    if (!this.arrowMarkerEnd || !this.arrowMarkerStart) return;
+    const endPath = this.arrowMarkerEnd.firstElementChild;
+    const startPath = this.arrowMarkerStart.firstElementChild;
+    if (endPath) endPath.setAttribute("fill", this.state.stroke);
+    if (startPath) startPath.setAttribute("fill", this.state.stroke);
   }
 }
 
@@ -203,9 +234,34 @@ function perpendicularOffset(
   return { x: nx * amount, y: ny * amount };
 }
 
-function applyArrowMarkers(path: SVGPathElement, arrow: ArrowDirection): void {
-  const startUrl = "url(#hb-arrow-start)";
-  const endUrl = "url(#hb-arrow-end)";
+function markerIdFragment(lineId: string): string {
+  return lineId.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function createColoredArrowMarker(
+  id: string,
+  orient: "auto" | "auto-start-reverse",
+  fill: string,
+): SVGMarkerElement {
+  const marker = document.createElementNS(SVG_NS, "marker");
+  marker.setAttribute("id", id);
+  marker.setAttribute("viewBox", "0 0 10 10");
+  marker.setAttribute("refX", "9");
+  marker.setAttribute("refY", "5");
+  marker.setAttribute("markerWidth", "8");
+  marker.setAttribute("markerHeight", "8");
+  marker.setAttribute("orient", orient);
+  marker.setAttribute("markerUnits", "userSpaceOnUse");
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", "M0,0 L10,5 L0,10 z");
+  path.setAttribute("fill", fill);
+  marker.appendChild(path);
+  return marker;
+}
+
+function applyArrowMarkers(path: SVGPathElement, arrow: ArrowDirection, idFrag: string): void {
+  const startUrl = `url(#hb-la-${idFrag}-start)`;
+  const endUrl = `url(#hb-la-${idFrag}-end)`;
   switch (arrow) {
     case "ltr":
       path.removeAttribute("marker-start");

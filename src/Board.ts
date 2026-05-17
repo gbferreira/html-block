@@ -102,8 +102,6 @@ export class Board implements BlockHost {
     this.container.appendChild(this.svg);
 
     this.defs = document.createElementNS(SVG_NS, "defs");
-    this.defs.appendChild(buildArrowMarker("hb-arrow-end", "auto"));
-    this.defs.appendChild(buildArrowMarker("hb-arrow-start", "auto-start-reverse"));
     this.svg.appendChild(this.defs);
 
     this.bgRect = document.createElementNS(SVG_NS, "rect");
@@ -382,6 +380,10 @@ export class Board implements BlockHost {
     return out;
   }
 
+  getSvgDefs(): SVGDefsElement {
+    return this.defs;
+  }
+
   startConnectionDrag(fromBlockId: string, side: EndpointSide, event: PointerEvent): void {
     const fromBlock = this.blockIndex.get(fromBlockId);
     if (!(fromBlock instanceof RectBlock)) return;
@@ -452,11 +454,22 @@ export class Board implements BlockHost {
 
   private attachInteractions(): void {
     this.svg.addEventListener("contextmenu", (event) => {
+      const target = event.target as Element | null;
+      const isBackground =
+        target === this.svg || target === this.bgRect || target === this.blocksLayer;
+      if (!isBackground) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
-      const board = this.clientToBoard(event.clientX, event.clientY);
-      this.lastMenuBoardPos = board;
+      this.selectBlock(null);
       const hostRect = this.container.getBoundingClientRect();
-      this.menu.open(event.clientX - hostRect.left, event.clientY - hostRect.top);
+      this.bgPopover.open(event.clientX - hostRect.left, event.clientY - hostRect.top, {
+        title: "Background color",
+        colors: this.config.backgroundColors,
+        current: this.backgroundColor,
+        onPick: (color) => this.setBackgroundColor(color),
+      });
     });
 
     this.svg.addEventListener("pointerdown", (event) => {
@@ -476,6 +489,13 @@ export class Board implements BlockHost {
 
   private beginBackgroundInteraction(event: PointerEvent): void {
     this.selectBlock(null);
+    // If the toolbox is open, the first background pointerdown closes it; the
+    // same gesture's pointerup must not reopen (outside mousedown also closes,
+    // which would leave isOpen false and cause an unwanted reopen).
+    const skipToolboxOpen = this.menu.isOpen();
+    if (skipToolboxOpen) {
+      this.menu.close();
+    }
     const startClientX = event.clientX;
     const startClientY = event.clientY;
     const startPan = { ...this.pan };
@@ -523,15 +543,12 @@ export class Board implements BlockHost {
       if (exceeded) {
         // Pan ended; persist new pan.
         this.persist();
-      } else {
-        // Treated as a single click on the background → bg color picker.
+      } else if (!skipToolboxOpen) {
+        // Short left-button gesture on empty board → toolbox (add items).
+        const board = this.clientToBoard(e.clientX, e.clientY);
+        this.lastMenuBoardPos = board;
         const hostRect = this.container.getBoundingClientRect();
-        this.bgPopover.open(e.clientX - hostRect.left, e.clientY - hostRect.top, {
-          title: "Background color",
-          colors: this.config.backgroundColors,
-          current: this.backgroundColor,
-          onPick: (color) => this.setBackgroundColor(color),
-        });
+        this.menu.open(e.clientX - hostRect.left, e.clientY - hostRect.top);
       }
     };
     this.svg.addEventListener("pointermove", onMove);
@@ -717,24 +734,6 @@ interface ConnDragState {
   fromSide: EndpointSide;
   startBoard: { x: number; y: number };
   lastBoard: { x: number; y: number };
-}
-
-function buildArrowMarker(id: string, orient: "auto" | "auto-start-reverse"): SVGMarkerElement {
-  const marker = document.createElementNS(SVG_NS, "marker");
-  marker.setAttribute("id", id);
-  marker.setAttribute("viewBox", "0 0 10 10");
-  marker.setAttribute("refX", "9");
-  marker.setAttribute("refY", "5");
-  marker.setAttribute("markerWidth", "8");
-  marker.setAttribute("markerHeight", "8");
-  marker.setAttribute("orient", orient);
-  marker.setAttribute("markerUnits", "userSpaceOnUse");
-  const path = document.createElementNS(SVG_NS, "path");
-  path.setAttribute("d", "M0,0 L10,5 L0,10 z");
-  // Inherit the referencing line's color so each line tints its own arrows.
-  path.setAttribute("fill", "currentColor");
-  marker.appendChild(path);
-  return marker;
 }
 
 export function createBoard(target: HTMLElement, config: BoardConfig = {}): Board {
