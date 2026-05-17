@@ -1,0 +1,36 @@
+{
+  "name": "html-block",
+  "version": "0.1.0",
+  "description": "Create and manage HTML blocks (diagrams, maps, and reusable snippets).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "start": "tsx example/index.ts",
+    "dev": "tsx watch example/index.ts",
+    "example": "npm run start",
+    "browser": "npm run build && vite example/browser",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "html",
+    "blocks"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}

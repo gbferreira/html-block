@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.vite/
+example/browser/dist/
+*.tsbuildinfo
+.DS_Store
